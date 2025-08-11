@@ -9,7 +9,6 @@ import numpy as np
 st.set_page_config(page_title="ADGM Corporate Agent", layout="wide")
 st.title("ADGM Corporate Agent")
 
-#API Key
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=GEMINI_API_KEY)
@@ -26,6 +25,7 @@ REQUIRED_DOCS = {
         "Register of Members and Directors"
     ]
 }
+
 
 def extract_text_from_docx(file_obj):
     file_obj.seek(0)
@@ -92,7 +92,7 @@ def annotate_docx_bytes(original_bytesio, issues):
         snippet = issue.get("snippet") or issue.get("section") or issue.get("text") or issue.get("issue", "")
         if not snippet: continue
         para_idx = find_paragraph_indices_containing(doc, snippet)
-        if not para_idx:  # fuzzy match
+        if not para_idx:
             words = [w for w in re.findall(r"\w{4,}", snippet)][:6]
             for i, p in enumerate(doc.paragraphs):
                 if any(w.lower() in normalize_snippet(p.text) for w in words):
@@ -165,15 +165,32 @@ if uploaded_files:
                     model = genai.GenerativeModel("gemini-1.5-flash")
                     resp = model.generate_content(prompt)
                     raw = resp.text.strip()
+
                     try:
-                        data = json.loads(raw)
+                        parsed = json.loads(raw)
                     except:
-                        match = re.search(r"(\{[\s\S]*\})", raw)
-                        data = json.loads(match.group(1)) if match else {"issues": []}
-                    issues = data.get("issues", [])
-                    st.subheader("Findings")
-                    st.write(issues if issues else "No issues found.")
-                    if not issues: st.text_area("Raw AI Output", raw, height=300)
+                        match = re.search(r"\{[\s\S]*\}", raw)
+                        if match:
+                            try:
+                                parsed = json.loads(match.group(0))
+                            except:
+                                parsed = {}
+                        else:
+                            parsed = {}
+
+                    issues = parsed.get("issues", [])
+                    if not isinstance(issues, list):
+                        issues = []
+
+                    st.subheader("AI Compliance Findings")
+                    if issues:
+                        st.table(issues)  
+                    else:
+                        st.warning("No structured issues found.")
+
+                    st.subheader("Raw AI Output")
+                    st.text_area("Gemini Output", raw, height=300)
+
                 except Exception as e:
                     st.error(f"AI error: {e}")
                     issues = []
