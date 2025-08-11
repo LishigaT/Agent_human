@@ -6,9 +6,8 @@ import json, os, glob, re
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
-st.set_page_config(page_title="ADGM Corporate Agent – Compliance Checker", layout="wide")
+st.set_page_config(page_title="ADGM Corporate Agent", layout="wide")
 st.title("ADGM Corporate Agent")
-st.write("Upload `.docx` files to check compliance.")
 
 #API Key
 try:
